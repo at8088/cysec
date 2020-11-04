@@ -1,0 +1,44 @@
+Exercice 1:
+
+Question 1:
+
+The first compilation produces a binary that has the expected behavior ie when the sum overflows the error is detected and the value is wrapped around ( which is the behavior by default ).
+
+The second compilation produces a binary that  doesn't detect the overflow error because thre O2 optimisatrion which assumes that a+b is always positive and therefore it deletes the if statement.
+
+The third compilation produces a binary that has the expected behavior since the option -fno-strict-overflow tells the compiler that an overflow might happen and that it shouldn't do any optimisation concerning signed integers' arithmetics.
+
+The fourth compilation produces a binary that also has the expected bahvior because -fno-strict-overflow prevents the -O2 optimisation from doing arithmetic optimisation which is it's default behavior.
+
+Question 2:
+
+To solve this problem we change the second if condition to a > INT_MAX - b so that the compiler never assumes that the condition is always false.
+
+if (a > INT_MAX - b) {
+	printf("overflow error \n");
+  	return (-1) ;
+}
+
+Exercice 2:
+
+
+Question 1 :
+
+"You loose" : The variable x wasn't overwritten because the second parameter is less than the size of the array.
+
+"You win" : The variable x was overwritten because the second parameter is exactly 8 .
+
+Infinte loop : The second parameter is greater than 8 and so when i = 9 t1[i] will overwrite the value of i and if this value is less than the second parameter it loops starting from this value and this is done forever.
+
+Question 2 :
+
+input = 8 makes the program print You win
+
+Question 3 :
+
+Variables   :  Offset
+ x		-0x5 (rbp)
+ i		-0x4 (rbp)
+ t1		-0xd (rbp)
+Question 4 :
+If the second argument is greater than 7 the error "stack smashing" is detected and the program is terminated.

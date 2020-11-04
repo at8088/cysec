@@ -6,7 +6,8 @@
  */
 
 #include "aes-128_enc.h"
-
+#include <stdio.h>
+extern void print_vect(uint8_t *v, int n);
 /*
  * Constant-time ``broadcast-based'' multiplication by $a$ in $F_2[X]/X^8 + X^4 + X^3 + X + 1$
  */
@@ -20,7 +21,6 @@ uint8_t xtime(uint8_t p)
 
 	return ((p << 1) ^ m);
 }
-
 
 uint8_t xtime_v2(uint8_t p)
 {
@@ -47,29 +47,29 @@ void aes_round(uint8_t block[AES_BLOCK_SIZE], uint8_t round_key[AES_BLOCK_SIZE],
 	 * SubBytes + ShiftRow
 	 */
 	/* Row 0 */
-	block[ 0] = S[block[ 0]];
-	block[ 4] = S[block[ 4]];
-	block[ 8] = S[block[ 8]];
+	block[0] = S[block[0]];
+	block[4] = S[block[4]];
+	block[8] = S[block[8]];
 	block[12] = S[block[12]];
 	/* Row 1 */
 	tmp = block[1];
-	block[ 1] = S[block[ 5]];
-	block[ 5] = S[block[ 9]];
-	block[ 9] = S[block[13]];
+	block[1] = S[block[5]];
+	block[5] = S[block[9]];
+	block[9] = S[block[13]];
 	block[13] = S[tmp];
 	/* Row 2 */
 	tmp = block[2];
-	block[ 2] = S[block[10]];
+	block[2] = S[block[10]];
 	block[10] = S[tmp];
 	tmp = block[6];
-	block[ 6] = S[block[14]];
+	block[6] = S[block[14]];
 	block[14] = S[tmp];
 	/* Row 3 */
 	tmp = block[15];
 	block[15] = S[block[11]];
-	block[11] = S[block[ 7]];
-	block[ 7] = S[block[ 3]];
-	block[ 3] = S[tmp];
+	block[11] = S[block[7]];
+	block[7] = S[block[3]];
+	block[3] = S[tmp];
 
 	/*
 	 * MixColumns
@@ -123,7 +123,7 @@ void next_aes128_round_key(const uint8_t prev_key[16], uint8_t next_key[16], int
 void prev_aes128_round_key(const uint8_t next_key[16], uint8_t prev_key[16], int round)
 {
 	int i;
-	for(i = 15; i >= 4 ; i--)
+	for (i = 15; i >= 4; i--)
 	{
 		prev_key[i] = next_key[i] ^ next_key[i - 4];
 	}
@@ -131,7 +131,6 @@ void prev_aes128_round_key(const uint8_t next_key[16], uint8_t prev_key[16], int
 	prev_key[1] = next_key[1] ^ S[prev_key[14]];
 	prev_key[2] = next_key[2] ^ S[prev_key[15]];
 	prev_key[3] = next_key[3] ^ S[prev_key[12]];
-
 }
 
 /*
@@ -146,7 +145,7 @@ void aes128_enc(uint8_t block[AES_BLOCK_SIZE], const uint8_t key[AES_128_KEY_SIZ
 	for (i = 0; i < 16; i++)
 	{
 		block[i] ^= key[i];
-		ekey[i]   = key[i];
+		ekey[i] = key[i];
 	}
 	next_aes128_round_key(ekey, ekey + 16, 0);
 
@@ -155,6 +154,8 @@ void aes128_enc(uint8_t block[AES_BLOCK_SIZE], const uint8_t key[AES_128_KEY_SIZ
 	for (i = 1; i < nrounds; i++)
 	{
 		aes_round(block, ekey + nk, 0);
+		// printf("%d th round : ", i);
+		// print_vect(block, 16);
 		pk = (pk + 16) & 0x10;
 		nk = (nk + 16) & 0x10;
 		next_aes128_round_key(ekey + pk, ekey + nk, i);
