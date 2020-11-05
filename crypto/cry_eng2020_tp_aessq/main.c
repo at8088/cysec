@@ -1,14 +1,4 @@
 #include "attack.h"
-void print_vect(uint8_t *v, int n)
-{
-    int i;
-    printf("0x%02x", v[0]);
-    for (i = 0; i < n; i++)
-    {
-        printf(", 0x%02x", v[i]);
-    }
-    printf(".\n");
-}
 
 int main(int argc, char *argv[])
 {

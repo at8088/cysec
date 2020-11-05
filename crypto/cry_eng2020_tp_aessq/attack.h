@@ -15,6 +15,5 @@ int modular_substraction_16(int x, int y);
 void generate_set(uint8_t set[256][AES_BLOCK_SIZE], uint8_t c);
 void compute_possible_key(uint8_t enc_set[256][AES_BLOCK_SIZE], uint8_t result_key[AES_128_KEY_SIZE]);
 int attack();
-extern void print_vect(uint8_t *v, int n);
 
 #endif // ATTACK_H

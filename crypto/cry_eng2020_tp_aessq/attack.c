@@ -1,4 +1,16 @@
 #include "attack.h"
+
+void print_vect(uint8_t *v, int n)
+{
+    int i;
+    printf("0x%02x", v[0]);
+    for (i = 1; i < n; i++)
+    {
+        printf(", 0x%02x", v[i]);
+    }
+    printf(".\n");
+}
+
 /**
  * performs substraction x - y mod 16
 */
@@ -57,21 +69,8 @@ void fetch_random_key(uint8_t *key)
 }
 
 /**
- * Performs the 3 and 1/2 AES encryption on @set with a random key  
- * and puts this key in @key 
+ * Generates a Delta-set where the "star" element is at index 0
 */
-void query_3_and_half(uint8_t set[256][16], uint8_t key[AES_128_KEY_SIZE])
-{
-    int i = 0;
-    fetch_random_key(key);
-    for (i = 0; i < 256; i++)
-    {
-        aes128_enc(set[i], key, 4, 0);
-    }
-
-    return;
-}
-
 void generate_set(uint8_t set[256][AES_BLOCK_SIZE], uint8_t c)
 {
     int i = 0, j = 0;
@@ -87,10 +86,13 @@ void generate_set(uint8_t set[256][AES_BLOCK_SIZE], uint8_t c)
     return;
 }
 
+/**
+ * Takes an encrypted Delta-set @ enc_set and computes a possible 4th round key and puts in @ result_key
+ * which may be a false positive.
+*/
 void compute_possible_key(uint8_t enc_set[256][AES_BLOCK_SIZE], uint8_t result_key[AES_128_KEY_SIZE])
 {
     int i = 0, j = 0, k = 0;
-    uint8_t prev_key[AES_128_KEY_SIZE];
     for (i = 0; i < AES_128_KEY_SIZE; i++)
     {
         for (j = 0; j < 256; j++)
@@ -115,7 +117,10 @@ void compute_possible_key(uint8_t enc_set[256][AES_BLOCK_SIZE], uint8_t result_k
         }
     }
 }
-
+/**
+ * Takes all the possible keys and returns the byte to be the most likely in the actual key
+ * which the byte that occurs the most in all the possible keys
+*/
 uint8_t max_repeating_byte(uint8_t vectors[TRIAL_NUM][AES_128_KEY_SIZE], int index)
 {
     uint8_t maxElement;
@@ -140,6 +145,9 @@ uint8_t max_repeating_byte(uint8_t vectors[TRIAL_NUM][AES_128_KEY_SIZE], int ind
     return maxElement;
 }
 
+/**
+ * Performs the 3-round distinguisher attack on AES-128
+*/
 int attack()
 {
     int i = 0, j = 0;
@@ -157,7 +165,7 @@ int attack()
     printf("\033[0m");
     for (i = 0; i < TRIAL_NUM; i++)
     {
-        generate_set(set, (i * 52) % 256);
+        generate_set(set, (i * 52) % 256); // (i * 52) % 256 random constant (in the set) value.
         for (j = 0; j < 256; j++)
         {
             aes128_enc(set[j], master_key, 4, 0);
@@ -184,7 +192,7 @@ int attack()
         prev_aes128_round_key(ekey + nk, ekey + pk, 3 - i);
     }
 
-    if (strncmp(master_key, ekey + pk, AES_128_KEY_SIZE) == 0)
+    if (strncmp((const char *)master_key, (const char *)(ekey + pk), AES_128_KEY_SIZE) == 0)
     {
         printf("\033[0;32m");
         printf("Master key found.\n");
