@@ -6,7 +6,7 @@
 #include <time.h>
 #include "aes-128_enc.h"
 
-#define TRIAL_NUM 50
+#define TRIAL_NUM 20
 
 void query_3_and_half(uint8_t set[256][16], uint8_t key[AES_128_KEY_SIZE]);
 void fetch_random_key(uint8_t *key);
@@ -14,6 +14,7 @@ uint8_t half_round_decrypt(uint8_t state[AES_BLOCK_SIZE], int index, uint8_t key
 int modular_substraction_16(int x, int y);
 void generate_set(uint8_t set[256][AES_BLOCK_SIZE], uint8_t c);
 void compute_possible_key(uint8_t enc_set[256][AES_BLOCK_SIZE], uint8_t result_key[AES_128_KEY_SIZE]);
-void attack(uint8_t original_key[AES_128_KEY_SIZE], uint8_t found_key[AES_128_KEY_SIZE]);
+int attack();
+extern void print_vect(uint8_t *v, int n);
 
 #endif // ATTACK_H

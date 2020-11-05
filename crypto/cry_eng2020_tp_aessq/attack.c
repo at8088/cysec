@@ -6,26 +6,6 @@ int modular_substraction_16(int x, int y)
 {
     return ((x - y) % 16) + ((x >= y) ? 0 : 16);
 }
-extern void print_vect(uint8_t *v, int n);
-void shuffle(uint8_t *array, size_t n)
-{
-    if (n > 1)
-    {
-        size_t i;
-        for (i = 0; i < n - 1; i++)
-        {
-            size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
-            FILE *fp = fopen("/dev/urandom", "r");
-            int seed = 0;
-            fread(&seed, sizeof seed, 1, fp);
-            fclose(fp);
-            srand(seed);
-            uint8_t t = array[j];
-            array[j] = array[i];
-            array[i] = t;
-        }
-    }
-}
 
 /**
  * @state is needed to look up the original byte ie the one before the shift
@@ -160,32 +140,39 @@ uint8_t max_repeating_byte(uint8_t vectors[TRIAL_NUM][AES_128_KEY_SIZE], int ind
     return maxElement;
 }
 
-void attack(uint8_t original_key[AES_128_KEY_SIZE], uint8_t found_key[AES_128_KEY_SIZE])
+int attack()
 {
     int i = 0, j = 0;
     uint8_t set[256][AES_BLOCK_SIZE];
     uint8_t possible_keys[TRIAL_NUM][AES_128_KEY_SIZE];
+    uint8_t master_key[AES_128_KEY_SIZE];
     uint8_t ekey[AES_128_KEY_SIZE * 2];
     int nk, pk;
+
+    fetch_random_key(master_key);
+    printf("Fetched a random key for encryption.\n");
+    printf("Master key : ");
+    printf("\033[0;32m");
+    print_vect(master_key, AES_128_KEY_SIZE);
+    printf("\033[0m");
     for (i = 0; i < TRIAL_NUM; i++)
     {
         generate_set(set, (i * 52) % 256);
         for (j = 0; j < 256; j++)
         {
-            aes128_enc(set[j], original_key, 4, 0);
+            aes128_enc(set[j], master_key, 4, 0);
         }
         compute_possible_key(set, possible_keys[i]);
     }
-    puts("");
+
+    printf("%d Delta sets were encrypted, encrypted them,\nand %d possible keys were computed.\n", TRIAL_NUM, TRIAL_NUM);
+    printf("Will now deduce the actual master key ...\n");
     nk = 0;
     pk = 16;
     for (i = 0; i < AES_128_KEY_SIZE; i++)
     {
         ekey[i + nk] = max_repeating_byte(possible_keys, i);
     }
-
-    printf("4k : ");
-    print_vect(ekey + nk, 16);
 
     nk = 16;
     pk = 0;
@@ -197,10 +184,19 @@ void attack(uint8_t original_key[AES_128_KEY_SIZE], uint8_t found_key[AES_128_KE
         prev_aes128_round_key(ekey + nk, ekey + pk, 3 - i);
     }
 
-    printf("nk : ");
-    print_vect(ekey + nk, 16);
-    printf("pk : ");
-    print_vect(ekey + pk, 16);
-    printf("ok : ");
-    print_vect(original_key, 16);
+    if (strncmp(master_key, ekey + pk, AES_128_KEY_SIZE) == 0)
+    {
+        printf("\033[0;32m");
+        printf("Master key found.\n");
+        printf("\033[0m");
+        printf("Found key : ");
+        printf("\033[0;31m");
+        print_vect(ekey + pk, AES_128_KEY_SIZE);
+        printf("\033[0m");
+        printf("Master key randomly generated and found key are identical.\n");
+        printf("Attack successful.\n");
+        printf("\033[0m");
+        return 0;
+    }
+    return 1;
 }
