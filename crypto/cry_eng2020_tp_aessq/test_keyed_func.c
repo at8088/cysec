@@ -17,7 +17,7 @@ int main(int argc, char const *argv[])
     int i = 0, sum = 0;
     printf("Test of the distinguisher on the keyed function.\n");
     generate_set(set, 69); // "random" set
-    printf("Delta set generated.");
+    printf("Delta set generated.\n");
     for (i = 0; i < 256; i++)
     {
         keyed_function(set[i], key1, key2);
