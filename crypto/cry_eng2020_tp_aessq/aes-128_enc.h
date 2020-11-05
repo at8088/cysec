@@ -1,6 +1,6 @@
-#if !defined(AES_128_ENC)
-#define AES_128_ENC
-
+#if !defined(AES_128_ENC_H)
+#define AES_128_ENC_H
+#include <stdio.h>
 #include <stdint.h>
 #define AES_BLOCK_SIZE 16
 #define AES_128_KEY_SIZE 16
@@ -63,4 +63,4 @@ static const uint8_t Sinv[256] =
 void prev_aes128_round_key(const uint8_t next_key[16], uint8_t prev_key[16], int round);
 void next_aes128_round_key(const uint8_t prev_key[16], uint8_t next_key[16], int round);
 
-#endif // AES_128_ENC
+#endif // AES_128_ENC_H

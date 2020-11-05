@@ -1,7 +1,4 @@
-#include <stdio.h>
-#include "keyed_func.h"
-extern uint8_t half_round_decrypt(uint8_t state[AES_BLOCK_SIZE], int index, uint8_t key_byte);
-
+#include "attack.h"
 void print_vect(uint8_t *v, int n)
 {
     int i;
@@ -24,56 +21,13 @@ int main(int argc, char *argv[])
                             0x5e, 0xda, 0xc0, 0x28, 0x53, 0xdb, 0x84, 0xb0, 0xd0};
 
     uint8_t t[256][16];
-    int i = 0;
-    int sum = 0;
-    int j = 0;
-    for (i = 0; i < 256; i++)
-    {
-        t[i][0] = (uint8_t)i;
-        for (j = 1; j < 16; j++)
-        {
-            t[i][j] = 0;
-        }
-    }
-
-    for (i = 0; i < 256; i++)
-    {
-        aes128_enc(t[i], k1, 4, 0);
-    }
-
-    // printf("%d th :", 0);
-    // print_vect(t[1], 16);
-
-    // aes128_enc(t[1], k1, 2, 0);
-
-    // printf("%d th :", 0);
-    // print_vect(t[1], 16);
-
-    next_aes128_round_key(k1, k, 0);
-    next_aes128_round_key(k, l, 1);
-    next_aes128_round_key(l, p, 2);
-    next_aes128_round_key(p, k, 3);
-
-    // aes128_enc(t[1], k, 1, 0);
-
-    // printf("%d th :", 0);
-    // print_vect(t[1], 16);
-
-    // next_aes128_round_key(l, p, 2);
-    // uint8_t a = half_round_decrypt(t[1], 1, l[13]);
-    // printf("a = %x\n", a);
-
-    for (i = 0; i < 256; i++)
-    {
-        t[i][0] = half_round_decrypt(t[i], 0, k[0]);
-    }
-
-    for (i = 0; i < 256; i++)
-    {
-        sum ^= t[i][0];
-    }
-
-    printf("sum = %d", sum);
-
+    uint8_t d[256][16];
+    int i = 0, j = 0;
+    // next_aes128_round_key(k1, k, 0);
+    // next_aes128_round_key(k, l, 1);
+    // prev_aes128_round_key(l, p, 1);
+    // prev_aes128_round_key(p, k, 0);
+    // print_vect(k, 16);
+    attack(k1, l);
     return 0;
 }

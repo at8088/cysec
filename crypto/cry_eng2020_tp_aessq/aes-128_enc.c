@@ -6,7 +6,7 @@
  */
 
 #include "aes-128_enc.h"
-#include <stdio.h>
+
 extern void print_vect(uint8_t *v, int n);
 /*
  * Constant-time ``broadcast-based'' multiplication by $a$ in $F_2[X]/X^8 + X^4 + X^3 + X + 1$
@@ -154,8 +154,6 @@ void aes128_enc(uint8_t block[AES_BLOCK_SIZE], const uint8_t key[AES_128_KEY_SIZ
 	for (i = 1; i < nrounds; i++)
 	{
 		aes_round(block, ekey + nk, 0);
-		// printf("%d th round : ", i);
-		// print_vect(block, 16);
 		pk = (pk + 16) & 0x10;
 		nk = (nk + 16) & 0x10;
 		next_aes128_round_key(ekey + pk, ekey + nk, i);
