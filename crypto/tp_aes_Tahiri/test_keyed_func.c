@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "aes-128_enc.h"
+
 extern void keyed_function(uint8_t x[AES_BLOCK_SIZE], uint8_t k1[AES_128_KEY_SIZE],
                            uint8_t k2[AES_128_KEY_SIZE]);
 extern void generate_set(uint8_t set[256][AES_BLOCK_SIZE], uint8_t c);
