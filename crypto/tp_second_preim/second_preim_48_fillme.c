@@ -14,34 +14,22 @@
 #define ROTL24_21(x) ((((x) << 21) ^ ((x) >> 3)) & 0xFFFFFF)
 
 #define IV 0x010203040506ULL
-#define N (1 << 18)
+#define N (1 << 24)
+#define MAX_WAITING_TIME_FOR_ATTACK 10.0
+#define MAX_WAITING_TIME_FOR_EM_SEARCH 1.0
 
+// hash table type (cf. http://troydhanson.github.com/uthash/ for documentaion)
 typedef struct _htable
 {
 	uint64_t h;		   /*plays the role of the key*/
 	uint32_t m1[4];	   /*the message*/
+	int index_in_mess; /*index of the block in the message mess (only used for the func attack*/
 	UT_hash_handle hh; /*makes the struct hashable*/
 } htable_t;
 
 uint64_t cs48_dm(const uint32_t m[4], const uint64_t h);
 
-// void add_random_message(htable_t *ht)
-// {
-// 	htable_t *p = (htable_t *)malloc(sizeof(*p));
-// 	htable_t *check = NULL;
-// 	for (int j = 0; j < 4; j++)
-// 	{
-// 		p->m1[j] = (uint32_t)(xoshiro256starstar_random() & 0xFFFFFF);
-// 	}
-// 	p->h = cs48_dm(p->m1, 0);
-// 	HASH_FIND(hh, ht, &(p->h), sizeof(uint64_t), check);
-// 	if (check == NULL)
-// 	{
-// 		HASH_ADD(hh, ht, h, sizeof(uint64_t), p);
-// 	}
-// 	return;
-// }
-
+/*Deletes and frees memory of allocated for the hash table*/
 void delete_all(htable_t *ht)
 {
 	htable_t *current_msg, *tmp;
@@ -85,7 +73,7 @@ void speck48_96(const uint32_t k[4], const uint32_t p[2], uint32_t c[2])
 
 	return;
 }
-
+/*returns 1 if the*/
 int test_sp48(void)
 {
 	uint32_t k[4] = {0x020100, 0x0a0908, 0x121110, 0x1a1918};
@@ -223,11 +211,11 @@ int test_cs48_dm_fp(void)
  * where hs48_nopad is hs48 with no padding */
 void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
 {
-	time_t tm, tm_plus_3mn;
+	time_t tm, tm_plus_1mn;
 	htable_t *ht = NULL; // head of the hash table
 	htable_t *check = NULL;
-	uint64_t seed[4] = {56995656, 69996, 848484, 78954};
-	xoshiro256starstar_random_set(seed);
+	// uint64_t seed[4] = {0x121fffe3216, 0x4defefffef, 0xfff575ea2, 69};
+	// xoshiro256starstar_random_set(seed);
 	for (int i = 0; i < N; i++)
 	{
 		htable_t *p = (htable_t *)malloc(sizeof(*p));
@@ -244,16 +232,15 @@ void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
 		else
 		{
 			// highly unlikely that this happens
-			printf("Possible collision in find_exp_mess().")
+			printf("Possible collision in find_exp_mess().");
 		}
 
 		check = NULL;
 	}
 	time(&tm);
 	while (1)
-	// for (int i = 0; i < (); i++)
 	{
-		time(&tm_plus_3mn);
+		time(&tm_plus_1mn);
 		uint32_t m[4];
 		for (int j = 0; j < 4; j++)
 		{
@@ -270,9 +257,9 @@ void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
 			}
 			break;
 		}
-		if ((difftime(tm_plus_3mn, tm) / 60) > 3.0)
+		if ((difftime(tm_plus_1mn, tm) / 60) > MAX_WAITING_TIME_FOR_EM_SEARCH)
 		{
-			// if the search takes more than 3 mn
+			// if the search takes more than 1 mn
 			// quit and free memory
 			printf("Search for collision took too long. Quiting now to free memory.\n");
 			break;
@@ -283,21 +270,133 @@ void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
 
 void attack(void)
 {
-	/* FILL ME */
+	uint32_t m1[4], m2[4];
+	uint64_t fp = 0;
+	uint32_t *mess = NULL, *mess2 = NULL;
+	htable_t *p = NULL, *ht = NULL;
+	uint64_t chaining_val = IV;
+	int cm_index = 0;
+	uint32_t cm[4] = {0, 0, 0, 0};
+	int cm_found = 0;
+	time_t tm, tm_plus_10mn;
+
+	mess = (uint32_t *)malloc(sizeof(*mess) * (1 << 20));
+	if (mess == NULL)
+	{
+		printf("Couldn't allocate the memory for mess. Exiting.");
+		exit(1);
+	}
+	for (int i = 0; i < (1 << 20); i += 4)
+	{
+		mess[i + 0] = i;
+		mess[i + 1] = 0;
+		mess[i + 2] = 0;
+		mess[i + 3] = 0;
+
+		p = (htable_t *)malloc(sizeof(*p));
+		p->h = cs48_dm((mess + i), chaining_val);
+		p->index_in_mess = i;
+		chaining_val = p->h;
+		HASH_ADD(hh, ht, h, sizeof(uint64_t), p);
+	}
+
+	find_exp_mess(m1, m2);
+	fp = get_cs48_dm_fp(m2);
+	time(&tm);
+	while (1)
+	{
+		time(&tm_plus_10mn);
+		for (size_t i = 0; i < 4; i++)
+		{
+			cm[i] = (uint32_t)(xoshiro256starstar_random() & 0xFFFFFF);
+		}
+		chaining_val = cs48_dm(cm, fp);
+		HASH_FIND(hh, ht, &chaining_val, sizeof(uint64_t), p);
+		if (p != NULL)
+		{
+			cm_found = 1;
+			cm_index = p->index_in_mess;
+			break;
+		}
+		if ((difftime(tm_plus_10mn, tm) / 60) > MAX_WAITING_TIME_FOR_ATTACK)
+		{
+			printf("Collision block not found. Exiting to free memory.");
+			cm_found = 0;
+			break;
+		}
+	}
+
+	delete_all(ht);
+
+	mess2 = (uint32_t *)malloc(sizeof(*mess) * (1 << 20));
+	if (mess == NULL)
+	{
+		printf("Couldn't allocate the memory for mess2. Exiting.");
+		exit(1);
+	}
+
+	/*constructiong mess2*/
+	if (cm_found)
+	{
+		for (size_t i = 0; i < 4; i++)
+		{
+			mess2[i] = m1[i];
+		}
+
+		for (size_t i = 4; i < (cm_index)*4; i += 4)
+		{
+			mess2[i + 0] = m2[0];
+			mess2[i + 1] = m2[1];
+			mess2[i + 2] = m2[2];
+			mess2[i + 3] = m2[3];
+		}
+
+		for (size_t i = 0; i < 4; i++)
+		{
+			mess2[cm_index + i] = cm[i];
+		}
+
+		for (size_t i = cm_index + 4; i < (1 << 20); i += 4)
+		{
+			mess2[i] = mess[i];
+		}
+	}
+	else
+	{
+		printf("Collision block not found.");
+	}
+
+	free(mess2);
+	free(mess);
 }
 
-/**	m1 = {0x50145f, 0x8e50f9, 0x3a7e85, 0x64c6ae}
-	m2 = {0x5796c7, 0xd6aad7, 0xb046, 0x7e0653}
-	found in 51s
-*/
 int main()
 {
-	// attack();
-	// int a = test_sp48();
-	// int b = test_sp48_inv();
-	// int c = test_cs48_dm();
-	// int d = test_cs48_dm_fp();
-	// printf("%d    %d    %d    %d\n", a, b, c, d);
 
+	if (test_sp48())
+		printf("Speck 48/96 encryption test successful.");
+	if (test_sp48_inv())
+		printf("Speck 48/96 decryption test successful.");
+	if (test_cs48_dm())
+		printf("Davies-Meyer compression function test successful.");
+	if (test_cs48_dm_fp())
+		printf("Fixed point computation test successful.");
+
+	attack();
+	// uint32_t m1[4], m2[4];
+
+	// find_exp_mess(m1, m2);
+
+	// for (size_t i = 0; i < 4; i++)
+	// {
+	// 	printf("%x, ", m1[i]);
+	// }
+	// printf("\n");
+
+	// for (size_t i = 0; i < 4; i++)
+	// {
+	// 	printf("%x, ", m2[i]);
+	// }
+	// printf("\n");
 	return 0;
 }
